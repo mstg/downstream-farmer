@@ -12,7 +12,7 @@ from .exc import DownstreamError
 
 class DownstreamContract(object):
 
-    def __init__(self, client, hash, seed, size, challenge, expiration, tag):
+    def __init__(self, client, hash, seed, size, challenge, expiration, tag, api):
         self.hash = hash
         self.seed = seed
         self.size = size
@@ -22,6 +22,7 @@ class DownstreamContract(object):
         self.client = client
         self.answered = False
         self.cert_path = None
+        api.plus_contracts(1)
 
     def set_cert_path(self, cert_path):
         """Sets the path of a CA-Bundle to use for verifying requests

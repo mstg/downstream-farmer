@@ -8,7 +8,7 @@ setup(
     name='downstream-farmer',
     version=__version__,
     packages=['downstream_farmer'],
-    url='https://github.com/Storj/downstream-farmer',
+    url='https://github.com/mstg/downstream-farmer',
     license='MIT',
     author='Storj Labs',
     author_email='info@storj.io',
