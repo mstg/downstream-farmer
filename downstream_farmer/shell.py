@@ -69,6 +69,29 @@ def restore(path):
     else:
         return dict()
 
+class API(object):
+    def __init__(self):
+        self.running = 1
+        self.heartbeats = 0
+        self.contracts = 0
+
+    def start(self):
+        self.running = 1
+
+    def stop(self):
+        self.running = 0
+
+    def plus_heartbeats(self, count):
+        self.heartbeats += count
+
+    def plus_contracts(self, count):
+        self.contracts += count
+
+    def retrieve_heartbeats(self):
+        return self.heartbeats
+
+    def retrieve_contracts(self):
+        return self.contracts
 
 class Farmer(object):
 
@@ -102,6 +125,8 @@ class Farmer(object):
         # restore history and identities from file, if possible
         self.history_path = args.history
         self.identity_path = args.identity
+
+        self.api = args.api
 
         self.state = restore(self.history_path)
         self.identities = restore(self.identity_path)
@@ -247,11 +272,11 @@ class Farmer(object):
     def run(self, reconnect=False):
         client = DownstreamClient(
             self.url, self.token, self.address,
-            self.size, self.message, self.signature)
+            self.size, self.message, self.signature, self.api)
 
         client.set_cert_path(self.cert_path)
 
-        while (1):
+        while (self.api.running):
             try:
                 client.connect()
 
@@ -294,7 +319,11 @@ def eval_args(args):
     except DownstreamError as e:
         fail_exit('Error: {0}'.format(str(e)))
     except Exception as e:
-        fail_exit('Unexpected error: {0}'.format(str(e)))
+        if args.keepalive == True:
+            print "Retrying"
+            eval_args(args)
+        else:
+            fail_exit('Unexpected error: {0}'.format(str(e)))
     except:
         fail_exit('Unknown error.')
 
@@ -353,7 +382,9 @@ def parse_args():
                         .format(identity_path))
     parser.add_argument('-k', '--keepalive', help='Will attempt to reconnect '
                         'upon failure.', action='store_true')
-    return parser.parse_args()
+    parsed = parser.parse_args()
+    parsed.api = API()
+    return parsed
 
 
 def main():
