@@ -16,7 +16,7 @@ import requests
 from datetime import datetime, timedelta
 
 from downstream_farmer import utils, shell
-from downstream_farmer.shell import Farmer, save, restore
+from downstream_farmer.shell import Farmer, save, restore, API
 from downstream_farmer.client import DownstreamClient, DownstreamContract
 from downstream_farmer.exc import DownstreamError
 from heartbeat import Heartbeat
@@ -55,13 +55,15 @@ class TestContract(unittest.TestCase):
         self.tag = Heartbeat.tag_type().fromdict(MockValues.get_chunk_response['tag'])
         self.expiration = datetime.utcnow()+timedelta(int(MockValues.get_chunk_response['due']))
         self.client = mock.MagicMock()
+        self.api = API()
         self.contract = DownstreamContract(self.client,
                                            'hash',
                                            'seed',
                                            100,
                                            self.challenge,
                                            self.expiration,
-                                           self.tag)
+                                           self.tag,
+                                           self.api)
     
     def tearDown(self):
         pass
@@ -212,12 +214,14 @@ class TestClient(unittest.TestCase):
         self.token = binascii.hexlify(os.urandom(16)).decode('ascii')
         self.msg = ''
         self.sig = ''
+        self.api = API()
         self.client = DownstreamClient(self.server_url,
                                        self.token,
                                        self.address,
                                        self.size,
                                        self.msg,
-                                       self.sig)
+                                       self.sig,
+                                       self.api)
         self.test_contract = DownstreamContract(self.client,
             MockValues.get_chunk_response['file_hash'],
             MockValues.get_chunk_response['seed'],
@@ -227,7 +231,8 @@ class TestClient(unittest.TestCase):
             datetime.utcnow()+timedelta(seconds=
                 int(MockValues.get_chunk_response['due'])),
             Heartbeat.tag_type().fromdict(
-                MockValues.get_chunk_response['tag']))
+                MockValues.get_chunk_response['tag']),
+            self.api)
         self.test_heartbeat = Heartbeat.fromdict(MockValues.connect_response['heartbeat'])
 
     def tearDown(self):
@@ -371,6 +376,7 @@ class TestClient(unittest.TestCase):
         
         client.get_chunk.side_effect = DownstreamError('test error')
         client.contracts = []
+        client.api = API()
         with self.assertRaises(DownstreamError) as ex:
             DownstreamClient.run(client, 1)
         self.assertEqual(str(ex.exception), 'Unable to obtain a contract: test error')
@@ -389,6 +395,7 @@ class TestClient(unittest.TestCase):
         
         client.get_chunk.side_effect = patch_get_chunk
         client.get_next_contract.return_value = contract
+        client.api = API()
         DownstreamClient.run(client, 1)
         self.assertEqual(client.get_chunk.call_count, 1)
         self.assertEqual(contract.update_challenge.call_count, 1)
@@ -398,9 +405,11 @@ class TestClient(unittest.TestCase):
         client = mock.MagicMock(spec=DownstreamClient)
         client.get_total_size.return_value = 0
         client.desired_size = 100
+        client.api = API()
         contract = mock.MagicMock(spec=DownstreamContract)
         contract.time_remaining.return_value = 1
         contract.hash = '1'
+        contract.api = API()
         
         def patch_get_chunk(size):
             client.get_total_size.return_value = client.get_total_size.return_value + size
@@ -408,6 +417,7 @@ class TestClient(unittest.TestCase):
         
         client.get_chunk.side_effect = patch_get_chunk
         client.get_next_contract.return_value = contract
+
         with mock.patch('time.sleep') as a:
             DownstreamClient.run(client, 1)
         self.assertEqual(client.get_chunk.call_count, 1)
@@ -419,9 +429,11 @@ class TestClient(unittest.TestCase):
         client = mock.MagicMock(spec=DownstreamClient)
         client.get_total_size.return_value = 100
         client.desired_size = 100
+        client.api = API()
         contract = mock.MagicMock(spec=DownstreamContract)
         contract.time_remaining.return_value = 0
         contract.hash = '1'
+        contract.api = API()
         client.contracts = mock.MagicMock()
         client.contracts.remove = mock.MagicMock()
         
@@ -434,9 +446,11 @@ class TestClient(unittest.TestCase):
         client = mock.MagicMock(spec=DownstreamClient)
         client.get_total_size.return_value = 100
         client.desired_size = 100
+        client.api = API()
         contract = mock.MagicMock(spec=DownstreamContract)
         contract.time_remaining.return_value = 0
         contract.hash = '1'
+        contract.api = API()
         client.contracts = mock.MagicMock()
         client.contracts.remove = mock.MagicMock()
         
@@ -729,12 +743,13 @@ class TestShell(unittest.TestCase):
                 mock.patch('six.moves.urllib.request.urlopen') as patch:
             r.side_effect = MockRestore({'historyfile':dict(),'identityfile':dict()})
             farmer = Farmer(self.test_args)
+            farmer.api = API()
         with mock.patch('downstream_farmer.shell.DownstreamClient') as patch,\
                 mock.patch('downstream_farmer.shell.save',autospec=True) as s:
             patch.return_value.token = 'foo'
             patch.return_value.address = 'bar'
-            farmer.run()            
-            patch.assert_called_with(farmer.url, farmer.token, farmer.address, farmer.size, '', '')
+            farmer.run()
+            patch.assert_called_with(farmer.url, farmer.token, farmer.address, farmer.size, '', '', farmer.api)
             self.assertTrue(patch.return_value.connect.called)
             self.assertEqual(farmer.state['nodes'][patch.return_value.server]['token'],
                 patch.return_value.token)
