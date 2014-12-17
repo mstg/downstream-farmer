@@ -595,49 +595,31 @@ class TestShell(unittest.TestCase):
             shell.handler()
 
     def test_api_start(self):
-        with mock.patch(
-            'downstream_farmer.shell.API', autospec=True) as r,\
-                mock.patch.object(API, 'stop'):
-            api = API()
-            api.start()
+        api = API()
+        api.start()
         self.assertEqual(api.running, 1)
 
     def test_api_stop(self):
-        with mock.patch(
-            'downstream_farmer.shell.API', autospec=True) as r,\
-                mock.patch.object(API, 'start'):
-            api = API()
-            api.stop()
+        api = API()
+        api.stop()
         self.assertEqual(api.running, 0)
 
     def test_api_plus_heartbeats(self):
-        with mock.patch(
-            'downstream_farmer.shell.API', autospec=True) as r,\
-                mock.patch.object(API, 'plus_contracts'):
-            api = API()
-            api.plus_heartbeats(1)
+        api = API()
+        api.plus_heartbeats(1)
         self.assertEqual(api.heartbeats, 1)
 
     def test_api_retrieve_heartbeats(self):
-        with mock.patch(
-            'downstream_farmer.shell.API', autospec=True) as r,\
-                mock.patch.object(API, 'retrieve_contracts'):
-            api = API()
+        api = API()
         self.assertEqual(api.heartbeats, 0)
 
     def test_api_plus_contracts(self):
-        with mock.patch(
-            'downstream_farmer.shell.API', autospec=True) as r,\
-                mock.patch.object(API, 'plus_heartbeats'):
-            api = API()
-            api.plus_contracts(1)
+        api = API()
+        api.plus_contracts(1)
         self.assertEqual(api.contracts, 1)
 
     def test_api_retrieve_contracts(self):
-        with mock.patch(
-            'downstream_farmer.shell.API', autospec=True) as r,\
-                mock.patch.object(API, 'retrieve_heartbeats'):
-            api = API()
+        api = API()
         self.assertEqual(api.contracts, 0)
 
     def test_farmer_init_number_invalid(self):
