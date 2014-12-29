@@ -108,7 +108,6 @@ class DownstreamClient(object):
         self.token = r_json['token']
         self.heartbeat \
             = heartbeat_types[r_json['type']].fromdict(r_json['heartbeat'])
-        self.api.plus_heartbeats(1)
 
         # we can calculate farmer id for display...
         token = binascii.unhexlify(self.token)
@@ -217,6 +216,8 @@ class DownstreamClient(object):
                       format(str(ex), next_contract.hash))
                 self.contracts.remove(next_contract)
                 continue
+
+            self.api.plus_heartbeats(1)
 
             # answer the challenge
             print('Answering challenge.')
